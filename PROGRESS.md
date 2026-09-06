@@ -181,6 +181,11 @@ Live status per `docs/6-Implementation-Plan.md`. One phase at a time.
 - Sign-in path verified working up to code-send: unknown email correctly falls back to sign-up (`form_identifier_not_found`), and existing accounts receive codes (sign-ins are not captcha-gated).
 - Full end-to-end OTP entry/verification can't be automated (Turnstile correctly blocks bot browsers) — needs one manual pass with a real browser + inbox. **Reminder: OTP codes are single-attempt and invalidated by every resend — always use the code from the LATEST email, and codes expire after 10 minutes.**
 
+### Production deployment (this session)
+- **Live on `https://worthit.eu.cc`** (custom domain). Clerk production instance's Frontend API is `clerk.worthit.eu.cc` (registered in Supabase → Authentication → Third-Party Auth). Note: a bare `*.vercel.app` URL can never work with a Clerk production instance — its FAPI subdomain (`clerk.<app>.vercel.app`) is unroutable, and the `__clerk` path proxy needs server-side code holding the Clerk secret key. Always use the custom domain.
+- `impeccable` (agent/design-QA tooling, never imported by app code) moved from `dependencies` → `devDependencies`; `npm audit fix` resolved a `fast-uri` advisory (dev-dependency chain only, now 0 vulnerabilities). The two npm `allow-scripts` warnings in Vercel build logs (`@clerk/shared`, `puppeteer` postinstall scripts skipped) are expected and harmless — do not approve them.
+- Remaining: multi-user moderation test (Phase 5, needs a 2nd account — use a Gmail `+alias`); local dev keeps the `pk_test` dev instance on localhost.
+
 ### Menu Data Seeding & Schema Update
 - **Schema & Migration (`supabase/migrations/20260904100000_add_is_veg.sql`):**
   - Added `is_veg boolean not null default true` column to `items` table.
