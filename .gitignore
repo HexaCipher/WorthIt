@@ -30,3 +30,6 @@ dist-ssr
 .codex/
 pnpm-lock.yaml
 pnpm-workspace.yaml
+
+# Supabase CLI local state
+supabase/.temp/
