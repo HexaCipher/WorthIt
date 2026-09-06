@@ -9,10 +9,10 @@ Live status per `docs/6-Implementation-Plan.md`. One phase at a time.
 | 2. Authentication | ✅ Complete (migrated to Clerk Pro for email-code passwordless auth) |
 | 3. Core UI | ✅ Complete (user-verified working) |
 | 4. Main Features | ✅ Complete (user-verified working) |
-| 5. Trust & Moderation | 🟨 Code complete — SQL migration + live moderation test pending |
+| 5. Trust & Moderation | 🟨 Code complete — DB live; only multi-user moderation test pending |
 | 6. Nice-to-have Integrations | ⬜ Deferred until core loop is validated |
 | 7. Testing | ⬜ Not started |
-| 8. Deployment & Launch | ⬜ Not started |
+| 8. Deployment & Launch | ✅ Complete — live on https://www.worth-it.live (user-verified auth end-to-end) |
 | 9. Final Polish | ⬜ Not started |
 
 ## What was actually built
@@ -182,8 +182,15 @@ Live status per `docs/6-Implementation-Plan.md`. One phase at a time.
 - Full end-to-end OTP entry/verification can't be automated (Turnstile correctly blocks bot browsers) — needs one manual pass with a real browser + inbox. **Reminder: OTP codes are single-attempt and invalidated by every resend — always use the code from the LATEST email, and codes expire after 10 minutes.**
 
 ### Production deployment (this session)
-- **Live on `https://worthit.eu.cc`** (custom domain). Clerk production instance's Frontend API is `clerk.worthit.eu.cc` (registered in Supabase → Authentication → Third-Party Auth). Note: a bare `*.vercel.app` URL can never work with a Clerk production instance — its FAPI subdomain (`clerk.<app>.vercel.app`) is unroutable, and the `__clerk` path proxy needs server-side code holding the Clerk secret key. Always use the custom domain.
-- `impeccable` (agent/design-QA tooling, never imported by app code) moved from `dependencies` → `devDependencies`; `npm audit fix` resolved a `fast-uri` advisory (dev-dependency chain only, now 0 vulnerabilities). The two npm `allow-scripts` warnings in Vercel build logs (`@clerk/shared`, `puppeteer` postinstall scripts skipped) are expected and harmless — do not approve them.
+- **Live on `https://www.worth-it.live`** (custom domain; apex 308-redirects to www). Clerk production instance's Frontend API is `clerk.worth-it.live` (registered in Supabase → Authentication → Third-Party Auth — must always match the live Clerk domain). Note: a bare `*.vercel.app` URL can never work with a Clerk production instance — its FAPI subdomain is unroutable and the `__clerk` path proxy needs server-side code holding the Clerk secret key. Always use the custom domain.
+- **Domain history:** started on `worthit.eu.cc` (free TLD) — Gmail blocked all OTP mail with `550-5.7.1 "very low reputation of the sending domain"` (Transient/General bounce). Migrated everything to the purchased `worth-it.live`: Vercel domain, Clerk Change-domain (rotates the publishable key — must update `VITE_CLERK_PUBLISHABLE_KEY` in Vercel and redeploy), all Clerk email CNAMEs, and the full Resend DNS set. Old `worthit.eu.cc` DNS/Resend records can be removed.
+- **OTP delivery architecture** (Clerk has no native custom-SMTP option; the supported path is webhooks):
+  1. Clerk emits `email.created` (webhook, svix-signed) → Supabase Edge Function `clerk-email` (`supabase/functions/clerk-email/index.ts`, deployed via CLI with `verify_jwt = false` in `supabase/config.toml` — Clerk can't send a Supabase JWT; the function verifies Clerk's svix signature instead).
+  2. Function extracts the 6-digit OTP and sends via **Resend** API from `notifications@worth-it.live`.
+  3. "Delivered by Clerk" is disabled **only** on the verification-code template (Customization → Emails) to avoid duplicate sends.
+  - Secrets set via `supabase secrets set` (CLI): `RESEND_API_KEY`, `CLERK_WEBHOOK_SECRET`, `RESEND_FROM`. Webhook endpoint URL: `https://ovwsbbjpuriuraajvfdh.supabase.co/functions/v1/clerk-email`.
+- **Deployment gotchas hit (do not rediscover):** SPA fallback rewrite required in `vercel.json` or direct loads of `/login` etc. return Vercel 404; Bot Protection (Turnstile) silently stalls custom sign-up flows (turned OFF in the production instance); Clerk signing secrets are copy-button-only — `I`/`l` transcription broke webhook verification once; Resend auto-suppresses bounced addresses (remove recipients from Suppressions after fixing a bounce); new domains have zero reputation — expect Gmail to quarantine the first OTPs while it builds.
+- `impeccable` (agent/design-QA tooling, never imported by app code) moved from `dependencies` → `devDependencies`; `npm audit fix` resolved a `fast-uri` advisory (dev-dependency chain only, now 0 vulnerabilities). The npm `allow-scripts` warnings in Vercel build logs are expected and harmless — do not approve them.
 - Remaining: multi-user moderation test (Phase 5, needs a 2nd account — use a Gmail `+alias`); local dev keeps the `pk_test` dev instance on localhost.
 
 ### Menu Data Seeding & Schema Update
