@@ -14,7 +14,7 @@ import { Webhook } from 'npm:svix@1.44.0'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 const CLERK_WEBHOOK_SECRET = Deno.env.get('CLERK_WEBHOOK_SECRET') ?? ''
-const FROM = Deno.env.get('RESEND_FROM') ?? 'WorthIt <notifications@worthit.eu.cc>'
+const FROM = Deno.env.get('RESEND_FROM') ?? 'WorthIt <notifications@worth-it.live>'
 
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') {
