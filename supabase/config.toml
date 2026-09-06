@@ -8,4 +8,11 @@ project_id = "worthit"
 # under the Supabase integration setup page.
 [auth.third_party.clerk]
 enabled = true
-domain = "your-clerk-domain.clerk.accounts.dev"
+domain = "clerk.worthit.eu.cc"
+
+# OTP delivery: this function receives Clerk's `email.created` webhook and sends
+# the OTP through Resend. JWT verification must be OFF because Clerk doesn't send
+# a Supabase JWT — the function authenticates the request itself by verifying
+# Clerk's svix webhook signature.
+[functions.clerk-email]
+verify_jwt = false
