@@ -12,9 +12,12 @@
 // on the verification-code email template so emails are sent only once.
 import { Webhook } from 'npm:svix@1.44.0'
 
+// Then add the variable to the template if it doesn't exist yet:
+//   resend templates create --name "WorthIt Verification" --html "..." --variables '[{"key":"code","type":"string"}]'
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 const CLERK_WEBHOOK_SECRET = Deno.env.get('CLERK_WEBHOOK_SECRET') ?? ''
 const FROM = Deno.env.get('RESEND_FROM') ?? 'WorthIt <notifications@worth-it.live>'
+const RESEND_TEMPLATE_ID = Deno.env.get('RESEND_TEMPLATE_ID') ?? '83d02a2a-e51c-401b-9875-6ed27ecf3b42'
 
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') {
@@ -60,18 +63,11 @@ Deno.serve(async (req: Request) => {
     return new Response('no otp code', { status: 200 })
   }
 
-  // 3. Send via Resend
+  // 3. Send via Resend, referencing the published template (your custom design)
+  //    Note: when `template` is used, the payload must NOT include html/text — only
+  //    `from`, `to`, `subject`, and the template's variables. The template's own
+  //    from/subject are empty, so we supply them here.
   const subject = (data.subject as string) ?? 'Your WorthIt verification code'
-  const html = `
-    <div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px">
-      <h2 style="color:#17181C;margin:0 0 12px">Your WorthIt verification code</h2>
-      <p style="color:#4a4a4a;margin:0 0 16px">Enter this code to continue:</p>
-      <p style="font-size:32px;font-weight:700;letter-spacing:8px;color:#17181C;background:#F7EFE3;
-         padding:16px 24px;border-radius:12px;text-align:center;margin:0 0 16px">${code}</p>
-      <p style="color:#8a8a8a;font-size:13px;margin:0">
-        This code expires in 10 minutes. If you didn't request it, you can safely ignore this email.
-      </p>
-    </div>`
 
   const resendRes = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -79,7 +75,17 @@ Deno.serve(async (req: Request) => {
       Authorization: `Bearer ${RESEND_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ from: FROM, to: [to], subject, html }),
+    body: JSON.stringify({
+      from: FROM,
+      to: [to],
+      subject,
+      template: {
+        id: RESEND_TEMPLATE_ID,
+        variables: {
+          code,
+        },
+      },
+    }),
   })
 
   if (!resendRes.ok) {
