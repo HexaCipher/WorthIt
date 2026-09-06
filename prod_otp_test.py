@@ -24,9 +24,9 @@ with sync_playwright() as p:
     def on_response(r):
         try:
             u = r.url
-            if 'clerk' in u and ('/v1/client' in u) and 'environment' not in u:
+            if 'clerk' in u and '/v1/' in u:
                 try:
-                    body = r.text()[:500]
+                    body = r.text()[:700]
                 except Exception:
                     body = '<body unavailable>'
                 clerk_responses.append(f'{r.status} {r.request.method} {u.split("?")[0]}\n    {body}')
